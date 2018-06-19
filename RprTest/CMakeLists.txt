@@ -8,6 +8,11 @@ set(SOURCES
     material.h)
 
 add_executable(RprTest ${SOURCES})
+
+if ( BAIKAL_RPR_IS_HYBRID )
+target_compile_definitions(RprTest PRIVATE BAIKAL_RPR_IS_HYBRID_)
+endif ( BAIKAL_RPR_IS_HYBRID )
+
 target_compile_features(RprTest PRIVATE cxx_std_14)
 target_include_directories(RprTest PRIVATE .)
 target_link_libraries(RprTest PRIVATE GTest RprSupport RadeonProRender)
