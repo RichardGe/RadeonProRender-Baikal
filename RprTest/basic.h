@@ -74,7 +74,26 @@ public:
 
         rpr_creation_flags flags = GetCreationFlags();
 
-        ASSERT_EQ(rprCreateContext(RPR_API_VERSION, nullptr, 0, flags, nullptr, nullptr, &m_context), RPR_SUCCESS);
+
+		#ifdef BAIKAL_RPR_IS_HYBRID_
+			std::string TahoeNameFile = "../bin/Debug/BaikalRendererDLL.dll";
+			rpr_int m_tahoePluginID = rprRegisterPlugin(TahoeNameFile.c_str());
+			ASSERT_NE(m_tahoePluginID, -1);
+			rpr_int plugins[] = { m_tahoePluginID };
+			size_t pluginCount = sizeof(plugins) / sizeof(plugins[0]);
+		#endif
+
+
+        rpr_int status = rprCreateContext(RPR_API_VERSION,
+			#ifdef BAIKAL_RPR_IS_HYBRID_
+				plugins, pluginCount, 
+			#else
+				nullptr, 0, 
+			#endif
+			flags, nullptr, nullptr, &m_context);
+
+		ASSERT_EQ(status,RPR_SUCCESS);
+
         ASSERT_EQ(rprContextSetParameter1u(m_context, "randseed", 0u), RPR_SUCCESS);
 
         CreateFramebuffer();

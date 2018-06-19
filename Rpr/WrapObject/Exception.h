@@ -23,13 +23,30 @@ THE SOFTWARE.
 #include <exception>
 #include <stdexcept>
 
-class Exception
-    : public std::runtime_error
-{
-public:
-    Exception(int error, char const* msg)
-        : std::runtime_error(msg)
-        , m_error(error){};
 
-    int m_error;
-};
+#ifdef BAIKAL_RPR_IS_HYBRID_
+
+	#include "../../RprHybrid/Base/FrException.h"
+	typedef FrException Exception;
+
+#else
+	
+	class Exception
+		: public std::runtime_error
+	{
+	public:
+		Exception(int error, char const* msg)
+			: std::runtime_error(msg)
+			, m_error(error){};
+
+		int m_error;
+	};
+
+#endif
+
+
+
+
+
+
+
