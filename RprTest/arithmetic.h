@@ -54,7 +54,7 @@ public:
         rpr_material_node inputTexture;
         ASSERT_EQ(rprMaterialSystemCreateNode(m_matsys, RPR_MATERIAL_NODE_IMAGE_TEXTURE, &inputTexture), RPR_SUCCESS);
         AddMaterialNode("tex", inputTexture);
-        ASSERT_EQ(rprMaterialNodeSetInputImageData(inputTexture, "data", FindImage("../Resources/Textures/test_albedo1.jpg")), RPR_SUCCESS);
+        ASSERT_EQ(rprMaterialNodeSetInputImageData(inputTexture, "data", FindImage("../Resources/Textures/test_albedo1.png")), RPR_SUCCESS);
 
         rpr_material_node arithmetic;
         ASSERT_EQ(rprMaterialSystemCreateNode(m_matsys, RPR_MATERIAL_NODE_ARITHMETIC, &arithmetic), RPR_SUCCESS);
@@ -73,12 +73,12 @@ public:
         rpr_material_node texture_arg1;
         ASSERT_EQ(rprMaterialSystemCreateNode(m_matsys, RPR_MATERIAL_NODE_IMAGE_TEXTURE, &texture_arg1), RPR_SUCCESS);
         AddMaterialNode("tex1", texture_arg1);
-        ASSERT_EQ(rprMaterialNodeSetInputImageData(texture_arg1, "data", FindImage("../Resources/Textures/test_albedo1.jpg")), RPR_SUCCESS);
+        ASSERT_EQ(rprMaterialNodeSetInputImageData(texture_arg1, "data", FindImage("../Resources/Textures/test_albedo1.png")), RPR_SUCCESS);
 
         rpr_material_node texture_arg2;
         ASSERT_EQ(rprMaterialSystemCreateNode(m_matsys, RPR_MATERIAL_NODE_IMAGE_TEXTURE, &texture_arg2), RPR_SUCCESS);
         AddMaterialNode("tex2", texture_arg2);
-        ASSERT_EQ(rprMaterialNodeSetInputImageData(texture_arg2, "data", FindImage("../Resources/Textures/test_albedo2.jpg")), RPR_SUCCESS);
+        ASSERT_EQ(rprMaterialNodeSetInputImageData(texture_arg2, "data", FindImage("../Resources/Textures/test_albedo2.png")), RPR_SUCCESS);
 
         rpr_material_node arithmetic;
         ASSERT_EQ(rprMaterialSystemCreateNode(m_matsys, RPR_MATERIAL_NODE_ARITHMETIC, &arithmetic), RPR_SUCCESS);
