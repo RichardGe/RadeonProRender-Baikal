@@ -21,16 +21,16 @@ THE SOFTWARE.
 ********************************************************************/
 
 #include "RprSupport.h"
-#include "WrapObject/WrapObject.h"
-#include "WrapObject/ContextObject.h"
-#include "WrapObject/CameraObject.h"
-#include "WrapObject/FramebufferObject.h"
-#include "WrapObject/LightObject.h"
-#include "WrapObject/Materials/MaterialObject.h"
-#include "WrapObject/MatSysObject.h"
-#include "WrapObject/SceneObject.h"
-#include "WrapObject/ShapeObject.h"
-#include "WrapObject/Exception.h"
+#include "BaikalRendererDLL/WrapObject/WrapObject.h"
+#include "BaikalRendererDLL/WrapObject/ContextObject.h"
+#include "BaikalRendererDLL/WrapObject/CameraObject.h"
+#include "BaikalRendererDLL/WrapObject/FramebufferObject.h"
+#include "BaikalRendererDLL/WrapObject/LightObject.h"
+#include "BaikalRendererDLL/WrapObject/Materials/MaterialObject.h"
+#include "BaikalRendererDLL/WrapObject/MatSysObject.h"
+#include "BaikalRendererDLL/WrapObject/SceneObject.h"
+#include "BaikalRendererDLL/WrapObject/ShapeObject.h"
+#include "Rpr/Base/FrException.h"
 
 //defines behavior for unimplemented API part
 //#define UNIMLEMENTED_FUNCTION return RPR_SUCCESS;

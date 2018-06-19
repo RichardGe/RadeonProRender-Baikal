@@ -73,8 +73,10 @@ endif (BAIKAL_ENABLE_IO)
 
 if (BAIKAL_ENABLE_RPR)
     set(RprSupport_HEADER "${Baikal_SOURCE_DIR}/3rdparty/RprSupport/include/")
-    add_subdirectory(Rpr)
-    add_subdirectory(RprSupport)
+	add_subdirectory(Rpr)
+	add_subdirectory(RprSupport)
+	add_subdirectory(BaikalRendererDLL)
+    
 endif (BAIKAL_ENABLE_RPR)
 
 

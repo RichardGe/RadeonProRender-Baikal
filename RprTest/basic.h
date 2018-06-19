@@ -72,7 +72,18 @@ public:
         m_reference_path.append("/");
         m_output_path.append("/");
 
-        ASSERT_EQ(rprCreateContext(RPR_API_VERSION, nullptr, 0, RPR_CREATION_FLAGS_ENABLE_GPU0, nullptr, nullptr, &m_context), RPR_SUCCESS);
+
+
+		std::string TahoeNameFile = "../bin/Debug/BaikalRendererDLL.dll";
+		rpr_int m_tahoePluginID = rprRegisterPlugin(TahoeNameFile.c_str());
+		ASSERT_NE(m_tahoePluginID, -1);
+		rpr_int plugins[] = { m_tahoePluginID };
+		size_t pluginCount = sizeof(plugins) / sizeof(plugins[0]);
+
+
+
+
+        ASSERT_EQ(rprCreateContext(RPR_API_VERSION, plugins, pluginCount, RPR_CREATION_FLAGS_ENABLE_GPU0, nullptr, nullptr, &m_context), RPR_SUCCESS);
         ASSERT_EQ(rprContextSetParameter1u(m_context, "randseed", 0u), RPR_SUCCESS);
 
         CreateFramebuffer();

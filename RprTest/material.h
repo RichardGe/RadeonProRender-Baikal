@@ -35,7 +35,7 @@ public:
     };
 
     const std::string resource_dir = "../Resources/Textures/";
-    const std::string ext = ".jpg";
+    const std::string ext = ".png";
     const std::vector<std::string> texture_names =
     {
         "test_albedo1",
@@ -352,7 +352,7 @@ TEST_F(MaterialTest, Material_NormalMapping)
     ASSERT_EQ(rprMaterialNodeSetInputU_ext(sphere_mtl, RPR_UBER_MATERIAL_LAYERS, RPR_UBER_MATERIAL_LAYER_DIFFUSE | RPR_UBER_MATERIAL_LAYER_SHADING_NORMAL), RPR_SUCCESS);
     rpr_material_node inputTexture;
     ASSERT_EQ(rprMaterialSystemCreateNode(m_matsys, RPR_MATERIAL_NODE_IMAGE_TEXTURE, &inputTexture), RPR_SUCCESS);
-    ASSERT_EQ(rprMaterialNodeSetInputImageData(inputTexture, "data", FindImage("../Resources/Textures/test_normal.jpg")), RPR_SUCCESS);
+    ASSERT_EQ(rprMaterialNodeSetInputImageData(inputTexture, "data", FindImage("../Resources/Textures/test_normal.png")), RPR_SUCCESS);
     ASSERT_EQ(rprMaterialNodeSetInputN_ext(sphere_mtl, RPR_UBER_MATERIAL_NORMAL, inputTexture), RPR_SUCCESS);
     AddMaterialNode("tex", inputTexture);
 
@@ -367,7 +367,7 @@ TEST_F(MaterialTest, Material_BumpMapping)
     ASSERT_EQ(rprMaterialNodeSetInputU_ext(sphere_mtl, RPR_UBER_MATERIAL_LAYERS, RPR_UBER_MATERIAL_LAYER_DIFFUSE | RPR_UBER_MATERIAL_LAYER_SHADING_NORMAL), RPR_SUCCESS);
     rpr_material_node inputTexture;
     ASSERT_EQ(rprMaterialSystemCreateNode(m_matsys, RPR_MATERIAL_NODE_IMAGE_TEXTURE, &inputTexture), RPR_SUCCESS);
-    ASSERT_EQ(rprMaterialNodeSetInputImageData(inputTexture, "data", FindImage("../Resources/Textures/test_bump.jpg")), RPR_SUCCESS);
+    ASSERT_EQ(rprMaterialNodeSetInputImageData(inputTexture, "data", FindImage("../Resources/Textures/test_bump.png")), RPR_SUCCESS);
     ASSERT_EQ(rprMaterialNodeSetInputN_ext(sphere_mtl, RPR_UBER_MATERIAL_BUMP, inputTexture), RPR_SUCCESS);
     AddMaterialNode("tex", inputTexture);
 

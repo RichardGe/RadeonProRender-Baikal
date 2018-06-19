@@ -319,8 +319,8 @@ TEST_F(LightTest, Light_ImageBasedLight)
     Render();
     SaveAndCompare("1");
     RemoveLight(0);
-
-    AddEnvironmentLight("../Resources/Textures/test_albedo1.jpg");
+	
+    AddEnvironmentLight("../Resources/Textures/test_albedo1.png");
     Render();
     SaveAndCompare("2");
 
@@ -364,13 +364,13 @@ TEST_F(LightTest, Light_ImageBasedLightAndLightChanging)
 //
 //TEST_F(LightTestOverrideReflections, Light_OverrideReflection)
 //{
-//    AddEnvironmentLight("../Resources/Textures/test_albedo1.jpg");
+//    AddEnvironmentLight("../Resources/Textures/test_albedo1.png");
 //    ASSERT_EQ(rprSceneSetEnvironmentOverride(m_scene, RPR_SCENE_ENVIRONMENT_OVERRIDE_REFLECTION, m_lights[0]), RPR_SUCCESS);
 //
-//    AddEnvironmentLight("../Resources/Textures/test_albedo3.jpg");
+//    AddEnvironmentLight("../Resources/Textures/test_albedo3.png");
 //    ASSERT_EQ(rprSceneSetEnvironmentOverride(m_scene, RPR_SCENE_ENVIRONMENT_OVERRIDE_REFRACTION, m_lights[1]), RPR_SUCCESS);
 //
-//    ASSERT_EQ(rprSceneSetBackgroundImage(m_scene, FindImage("../Resources/Textures/test_normal.jpg")), RPR_SUCCESS);
+//    ASSERT_EQ(rprSceneSetBackgroundImage(m_scene, FindImage("../Resources/Textures/test_normal.png")), RPR_SUCCESS);
 //    
 //    Render();
 //    SaveAndCompare();
