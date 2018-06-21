@@ -30,6 +30,8 @@ namespace Shasta
 
 		void Render();
 
+		void GetImageData(FrNode* img, void* data);
+
 		void RenderTile(rpr_uint xmin, rpr_uint xmax, rpr_uint ymin, rpr_uint ymax);
 
 		void ClearMemory();

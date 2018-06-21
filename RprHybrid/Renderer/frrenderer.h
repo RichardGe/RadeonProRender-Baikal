@@ -15,6 +15,8 @@ public:
 
     virtual void Render() = 0;
 
+	virtual void GetImageData(FrNode* img, void* data) = 0;
+
     virtual void RenderTile(rpr_uint xmin, rpr_uint xmax, rpr_uint ymin, rpr_uint ymax) = 0;
 
     virtual void ClearMemory() = 0;

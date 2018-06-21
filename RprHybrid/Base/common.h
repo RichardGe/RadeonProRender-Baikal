@@ -22,17 +22,17 @@
 #include <stdio.h>
 #include <ctype.h>
 
-#include <math/matrix.h>
-#include <math/float3.h>
-#include <math/float2.h>
+#include "../MathRpr/matrix.h"
+#include "../MathRpr/float3.h"
+#include "../MathRpr/float2.h"
 
 #include <RprHybrid/RadeonProRender.h>
 
 typedef unsigned int uint;
-typedef RadeonRays::float2 rpr_float2;
-typedef RadeonRays::float3 rpr_float3;
-typedef RadeonRays::float4 rpr_float4;
-typedef RadeonRays::matrix rpr_matrix;
+typedef RadeonProRender::float2 rpr_float2;
+typedef RadeonProRender::float3 rpr_float3;
+typedef RadeonProRender::float4 rpr_float4;
+typedef RadeonProRender::matrix rpr_matrix;
 
 enum class PolygonType
 {

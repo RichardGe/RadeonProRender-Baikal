@@ -1,7 +1,7 @@
 #include "../Base/Common.h"
 #include "Math/matrix.h"
 #include "FrNode.h"
-#include "RprHybrid/RadeonProRender_GL.h"
+#include "Rpr/RadeonProRender_GL.h"
 #include <cfloat>
 #include <BaikalRendererDLL/TahoeDefaultParam.h>
 #include <unordered_map>
@@ -10,7 +10,7 @@ class FrRenderer;
 class FrRendererEncalps;
 class FrImageCache;
 
-using namespace RadeonRays;
+using namespace RadeonProRender;
 
 FrPropertyFactory::FrPropertyFactory()
 {
@@ -76,6 +76,7 @@ void FrPropertyFactory::InitializeNodeProperties()
     AddProperty<rpr_render_mode>(NodeTypes::Context, RPR_CONTEXT_RENDER_MODE, RPR_RENDER_MODE_GLOBAL_ILLUMINATION);
     AddProperty<rpr_float>(NodeTypes::Context, RPR_CONTEXT_ROUGHNESS_CAP, TAHOE_CONTEXT_DEFAULT_ROUGHNESS_CAP);
 	AddProperty(NodeTypes::Context, RPR_OBJECT_NAME, std::string());
+	AddProperty<rpr_uint>(NodeTypes::Context, RPR_OBJECT_RENDERER_ID, 0);
 	AddProperty(NodeTypes::Context, RPR_CONTEXT_GPU0_NAME, std::string());
 	AddProperty(NodeTypes::Context, RPR_CONTEXT_GPU1_NAME, std::string());
 	AddProperty(NodeTypes::Context, RPR_CONTEXT_GPU2_NAME, std::string());
@@ -87,6 +88,7 @@ void FrPropertyFactory::InitializeNodeProperties()
 	AddProperty(NodeTypes::Context, RPR_CONTEXT_CPU_NAME, std::string());
 	AddProperty<rpr_uint>(NodeTypes::Context, RPR_CONTEXT_TEXTURE_COMPRESSION, 0);
 	AddProperty<rpr_uint>(NodeTypes::Context, RPR_CONTEXT_CPU_THREAD_LIMIT, 128);
+	AddProperty<rpr_uint>(NodeTypes::Context, RPR_CONTEXT_API_VERSION, RPR_API_VERSION);
 	AddProperty(NodeTypes::Context, RPR_CONTEXT_LAST_ERROR_MESSAGE, std::string());
 	AddProperty<rpr_uint>(NodeTypes::Context, RPR_CONTEXT_MAX_DEPTH_DIFFUSE, TAHOE_CONTEXT_DEFAULT_MAXDIFFUSEDEPTH);
 	AddProperty<rpr_uint>(NodeTypes::Context, RPR_CONTEXT_MAX_DEPTH_SHADOW, TAHOE_CONTEXT_DEFAULT_MAXSHADOWDEPTH);
@@ -98,15 +100,7 @@ void FrPropertyFactory::InitializeNodeProperties()
 	AddProperty<rpr_uint>(NodeTypes::Context, RPR_CONTEXT_SINGLE_LEVEL_BVH_ENABLED, 0);
 	AddProperty<void*>(NodeTypes::Context, RPR_CONTEXT_CREATEPROP_COMPILE_CALLBACK, nullptr);
 	AddProperty<void*>(NodeTypes::Context, RPR_CONTEXT_CREATEPROP_COMPILE_USER_DATA, nullptr);
-
-
-
-	AddProperty<rpr_uint>(NodeTypes::Context, RPR_CONTEXT_RANDOM_SEED, 0U);
-
-
-	
-
-
+	AddProperty<rpr_uint>(NodeTypes::Context, RPR_CONTEXT_RANDOM_SEED, 0);
 
     // Scene.
     AddProperty<FrNode*>(NodeTypes::Scene, FR_NODE_CONTEXT, nullptr);
@@ -120,6 +114,7 @@ void FrPropertyFactory::InitializeNodeProperties()
     AddProperty<FrNode*>(NodeTypes::Scene, RPR_SCENE_ENVIRONMENT_OVERRIDE_TRANSPARENCY, nullptr);
     AddProperty<FrNode*>(NodeTypes::Scene, RPR_SCENE_ENVIRONMENT_OVERRIDE_BACKGROUND, nullptr);
 	AddProperty(NodeTypes::Scene, RPR_OBJECT_NAME, std::string());
+	AddProperty<rpr_uint>(NodeTypes::Scene, RPR_OBJECT_RENDERER_ID, 0);
 
     // Camera.
     AddProperty<FrNode*>(NodeTypes::Camera, FR_NODE_CONTEXT, nullptr);
@@ -140,6 +135,7 @@ void FrPropertyFactory::InitializeNodeProperties()
 		AddProperty<rpr_float>(NodeTypes::Camera, RPR_CAMERA_FAR_PLANE, TAHOE_CAMERA_DEFAULT_FAR_PLANE);
     AddProperty(NodeTypes::Camera, RPR_CAMERA_TRANSFORM, identity);
 	AddProperty(NodeTypes::Camera, RPR_OBJECT_NAME, std::string());
+	AddProperty<rpr_uint>(NodeTypes::Camera, RPR_OBJECT_RENDERER_ID, 0);
 	AddProperty<rpr_float>(NodeTypes::Camera, RPR_CAMERA_FOCAL_TILT, { 0.0f });
 	AddProperty<rpr_float>(NodeTypes::Camera, RPR_CAMERA_IPD,  TAHOE_CAMERA_DEFAULT_IPD );
 	AddProperty<rpr_float2>(NodeTypes::Camera, RPR_CAMERA_LENS_SHIFT, { 0.0f, 0.0f });
@@ -155,6 +151,7 @@ void FrPropertyFactory::InitializeNodeProperties()
     AddProperty<std::shared_ptr<unsigned char>>(NodeTypes::Image, RPR_IMAGE_DATA, std::shared_ptr<unsigned char>());
 	AddProperty<size_t>(NodeTypes::Image, RPR_IMAGE_DATA_SIZEBYTE, 0);
 	AddProperty(NodeTypes::Image, RPR_OBJECT_NAME, std::string());
+	AddProperty<rpr_uint>(NodeTypes::Image, RPR_OBJECT_RENDERER_ID, 0);
     AddProperty<FrNode*>(NodeTypes::Image, FR_NODE_GRAPH_MATERIAL_PARENT, nullptr);
 	AddProperty<rpr_uint>(NodeTypes::Image, RPR_IMAGE_WRAP, RPR_IMAGE_WRAP_TYPE_REPEAT);
 	AddProperty<rpr_uint>(NodeTypes::Image, RPR_IMAGE_FILTER, RPR_IMAGE_FILTER_TYPE_LINEAR);
@@ -166,6 +163,7 @@ void FrPropertyFactory::InitializeNodeProperties()
     AddProperty<rpr_buffer_desc>(NodeTypes::Buffer, RPR_BUFFER_DESC, { 0, 0 });
     AddProperty<std::shared_ptr<unsigned char>>(NodeTypes::Buffer, RPR_BUFFER_DATA, std::shared_ptr<unsigned char>());
 	AddProperty(NodeTypes::Buffer, RPR_OBJECT_NAME, std::string());
+	AddProperty<rpr_uint>(NodeTypes::Buffer, RPR_OBJECT_RENDERER_ID, 0);
     AddProperty<FrNode*>(NodeTypes::Buffer, FR_NODE_GRAPH_MATERIAL_PARENT, nullptr);
 
     // Framebuffer.
@@ -176,6 +174,7 @@ void FrPropertyFactory::InitializeNodeProperties()
     AddProperty<rpr_GLint>(NodeTypes::FrameBuffer, RPR_FRAMEBUFFER_GL_MIPLEVEL, 0);
     AddProperty<rpr_GLuint>(NodeTypes::FrameBuffer, RPR_FRAMEBUFFER_GL_TEXTURE, 0);
 	AddProperty(NodeTypes::FrameBuffer, RPR_OBJECT_NAME, std::string());
+	AddProperty<rpr_uint>(NodeTypes::FrameBuffer, RPR_OBJECT_RENDERER_ID, 0);
 
 
     // Mesh.
@@ -224,6 +223,7 @@ void FrPropertyFactory::InitializeNodeProperties()
 	AddProperty<rpr_uint>(NodeTypes::Mesh, RPR_SHAPE_TYPE, RPR_SHAPE_TYPE_MESH);
 	AddProperty<rpr_uint>(NodeTypes::Mesh, RPR_MESH_UV_DIM, TAHOE_SHAPE_DEFAULT_UVDIM);
 	AddProperty(NodeTypes::Mesh, RPR_OBJECT_NAME, std::string());
+	AddProperty<rpr_uint>(NodeTypes::Mesh, RPR_OBJECT_RENDERER_ID, 0);
 	AddProperty<rpr_uint>(NodeTypes::Mesh, RPR_SHAPE_LAYER_MASK, 0xFFffFFff);
 
     // Instance.
@@ -249,6 +249,7 @@ void FrPropertyFactory::InitializeNodeProperties()
 	AddProperty<FrNode*>(NodeTypes::Instance, RPR_SHAPE_DISPLACEMENT_MATERIAL, nullptr);
 	AddProperty<rpr_uint>(NodeTypes::Instance, RPR_SHAPE_TYPE, RPR_SHAPE_TYPE_INSTANCE);
 	AddProperty(NodeTypes::Instance, RPR_OBJECT_NAME, std::string());
+	AddProperty<rpr_uint>(NodeTypes::Instance, RPR_OBJECT_RENDERER_ID, 0);
 	AddProperty<rpr_uint>(NodeTypes::Instance, RPR_SHAPE_LAYER_MASK, 0xFFffFFff);
 
     // PointLight.
@@ -258,6 +259,7 @@ void FrPropertyFactory::InitializeNodeProperties()
     AddProperty<rpr_float3>(NodeTypes::PointLight, RPR_POINT_LIGHT_RADIANT_POWER, { 0.0f, 0.0f, 0.0f });
 	AddProperty<rpr_uint>(NodeTypes::PointLight, RPR_LIGHT_TYPE, RPR_LIGHT_TYPE_POINT);
 	AddProperty(NodeTypes::PointLight, RPR_OBJECT_NAME, std::string());
+	AddProperty<rpr_uint>(NodeTypes::PointLight, RPR_OBJECT_RENDERER_ID, 0);
 
 
     // DirectionalLight.
@@ -268,6 +270,7 @@ void FrPropertyFactory::InitializeNodeProperties()
 	AddProperty<rpr_float>(NodeTypes::DirectionalLight, RPR_DIRECTIONAL_LIGHT_SHADOW_SOFTNESS,  TAHOE_DIRECTIONNALLIGHT_DEFAULT_ANGLE / ((float)M_PI/2.0f) );
 	AddProperty<rpr_uint>(NodeTypes::DirectionalLight, RPR_LIGHT_TYPE, RPR_LIGHT_TYPE_DIRECTIONAL);
 	AddProperty(NodeTypes::DirectionalLight, RPR_OBJECT_NAME, std::string());
+	AddProperty<rpr_uint>(NodeTypes::DirectionalLight, RPR_OBJECT_RENDERER_ID, 0);
 
 
     // SpotLight.
@@ -278,6 +281,7 @@ void FrPropertyFactory::InitializeNodeProperties()
     AddProperty<rpr_float2>(NodeTypes::SpotLight, RPR_SPOT_LIGHT_CONE_SHAPE, { 0.0f, 0.0f });
 	AddProperty<rpr_uint>(NodeTypes::SpotLight, RPR_LIGHT_TYPE, RPR_LIGHT_TYPE_SPOT);
 	AddProperty(NodeTypes::SpotLight, RPR_OBJECT_NAME, std::string());
+	AddProperty<rpr_uint>(NodeTypes::SpotLight, RPR_OBJECT_RENDERER_ID, 0);
 
 
     // EnvironmentLight.
@@ -288,6 +292,7 @@ void FrPropertyFactory::InitializeNodeProperties()
     AddProperty<rpr_float>(NodeTypes::EnvironmentLight, RPR_ENVIRONMENT_LIGHT_INTENSITY_SCALE, 1.0f);
 	AddProperty<rpr_uint>(NodeTypes::EnvironmentLight, RPR_LIGHT_TYPE, RPR_LIGHT_TYPE_ENVIRONMENT);
 	AddProperty(NodeTypes::EnvironmentLight, RPR_OBJECT_NAME, std::string());
+	AddProperty<rpr_uint>(NodeTypes::EnvironmentLight, RPR_OBJECT_RENDERER_ID, 0);
 	AddProperty<FrShapeList>(NodeTypes::EnvironmentLight, RPR_ENVIRONMENT_LIGHT_PORTAL_LIST, FrShapeList());
 
 
@@ -301,6 +306,7 @@ void FrPropertyFactory::InitializeNodeProperties()
 	AddProperty<rpr_float3>(NodeTypes::SkyLight, RPR_SKY_LIGHT_DIRECTION, rpr_float3(TAHOE_SKYLIGHT_DEFAULT_DIRECTION));
 	AddProperty<rpr_uint>(NodeTypes::SkyLight, RPR_LIGHT_TYPE, RPR_LIGHT_TYPE_SKY);
 	AddProperty(NodeTypes::SkyLight, RPR_OBJECT_NAME, std::string());
+	AddProperty<rpr_uint>(NodeTypes::SkyLight, RPR_OBJECT_RENDERER_ID, 0);
 	AddProperty<FrShapeList>(NodeTypes::SkyLight, RPR_SKY_LIGHT_PORTAL_LIST, FrShapeList());
 
 
@@ -312,12 +318,14 @@ void FrPropertyFactory::InitializeNodeProperties()
 	AddProperty(NodeTypes::IESLight, RPR_IES_LIGHT_IMAGE_DESC, rpr_ies_image_desc{0,0,nullptr,nullptr});
 	AddProperty<rpr_uint>(NodeTypes::IESLight, RPR_LIGHT_TYPE, RPR_LIGHT_TYPE_IES);
 	AddProperty(NodeTypes::IESLight, RPR_OBJECT_NAME, std::string());
+	AddProperty<rpr_uint>(NodeTypes::IESLight, RPR_OBJECT_RENDERER_ID, 0);
 
 
     // Material system.
     AddProperty<FrNode*>(NodeTypes::MaterialSystem, FR_NODE_CONTEXT, nullptr);
     AddProperty<rpr_material_system_type>(NodeTypes::MaterialSystem, RPR_MATERIAL_NODE_SYSTEM, 0);
 	AddProperty(NodeTypes::MaterialSystem, RPR_OBJECT_NAME, std::string());
+	AddProperty<rpr_uint>(NodeTypes::MaterialSystem, RPR_OBJECT_RENDERER_ID, 0);
 
     // Material.
     // Most of these properties are mutable since they must be able to take on different data types.
@@ -327,6 +335,7 @@ void FrPropertyFactory::InitializeNodeProperties()
     AddProperty<rpr_material_node_type>(NodeTypes::Material, RPR_MATERIAL_NODE_TYPE, 0);
 	AddProperty<FrAutoreleasePool>(NodeTypes::Material, FR_MATERIAL_AUTORELEASE_POOL, FrAutoreleasePool{});
 	AddProperty(NodeTypes::Material, RPR_OBJECT_NAME, std::string());
+	AddProperty<rpr_uint>(NodeTypes::Material, RPR_OBJECT_RENDERER_ID, 0);
     AddProperty<bool>(NodeTypes::Material, FR_MATERIAL_NODE_IS_STD, false);
     AddProperty<FrNode*>(NodeTypes::Material, FR_NODE_GRAPH_MATERIAL_PARENT, nullptr);
 
@@ -334,21 +343,25 @@ void FrPropertyFactory::InitializeNodeProperties()
     AddProperty<FrNode*>(NodeTypes::PostEffect, FR_NODE_CONTEXT, nullptr);
     AddProperty<rpr_post_effect_type>(NodeTypes::PostEffect, RPR_POST_EFFECT_TYPE, 0U);
     AddProperty(NodeTypes::PostEffect, RPR_OBJECT_NAME, std::string());
+	AddProperty<rpr_uint>(NodeTypes::PostEffect, RPR_OBJECT_RENDERER_ID, 0);
 
 	// Composite
     AddProperty<FrNode*>(NodeTypes::Composite, FR_NODE_CONTEXT, nullptr);
     AddProperty<rpr_composite_type>(NodeTypes::Composite, RPR_COMPOSITE_TYPE, 0U);
     AddProperty(NodeTypes::Composite, RPR_OBJECT_NAME, std::string());
+	AddProperty<rpr_uint>(NodeTypes::Composite, RPR_OBJECT_RENDERER_ID, 0);
 
 	// LUT
     AddProperty<FrNode*>(NodeTypes::LUT, FR_NODE_CONTEXT, nullptr);
     AddProperty(NodeTypes::LUT, RPR_OBJECT_NAME, std::string());
+	AddProperty<rpr_uint>(NodeTypes::LUT, RPR_OBJECT_RENDERER_ID, 0);
 	AddProperty(NodeTypes::LUT, RPR_LUT_FILENAME, std::string());
 	AddProperty(NodeTypes::LUT, RPR_LUT_DATA, std::string());
 
 	// Hetero Volume.
     AddProperty<FrNode*>(NodeTypes::HeteroVolume, FR_NODE_CONTEXT, nullptr);
 	AddProperty(NodeTypes::HeteroVolume, RPR_OBJECT_NAME, std::string());
+	AddProperty<rpr_uint>(NodeTypes::HeteroVolume, RPR_OBJECT_RENDERER_ID, 0);
 	AddProperty<size_t>(NodeTypes::HeteroVolume, RPR_HETEROVOLUME_SIZE_X, 0);
 	AddProperty<size_t>(NodeTypes::HeteroVolume, RPR_HETEROVOLUME_SIZE_Y, 0);
 	AddProperty<size_t>(NodeTypes::HeteroVolume, RPR_HETEROVOLUME_SIZE_Z, 0);

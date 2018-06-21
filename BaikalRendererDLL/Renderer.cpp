@@ -1,9 +1,12 @@
 #include "Renderer.h"
 
-#include "../BaikalRendererDLL/MaterialNode.h"
+#include "../RprHybrid/Node/RprMaterialNode.h"
 
 
 #define FR_NODE_BAIKAL_NODE          (FR_CUSTOM_PROPERTY_KEYS_START - 1)
+
+
+
 
 
 using namespace Shasta;
@@ -45,6 +48,11 @@ void Renderer::Render()
     return;
 
 
+}
+
+void Renderer::GetImageData(FrNode* img, void* data)
+{
+	return;
 }
 
 void Renderer::RenderTile(rpr_uint xmin, rpr_uint xmax, rpr_uint ymin, rpr_uint ymax)
@@ -291,6 +299,11 @@ void Renderer::OnNodeCreated(FrNode* node)
 		}
 
 
+		//  1001 is Tahoe
+		//  1002 is Baikal
+		node->SetProperty<rpr_uint>(RPR_OBJECT_RENDERER_ID, 1002);
+
+
 	}
 	catch(FrException& e)
 	{
@@ -393,7 +406,11 @@ void Renderer::ResetCameraPosLookUp(FrNode* node)
 	rpr_float3 up = node->GetProperty<rpr_float3>(RPR_CAMERA_UP);
 	CameraObject* tahoeNodeCamera_ = node->GetProperty<CameraObject*>(FR_NODE_BAIKAL_NODE);
 
-	tahoeNodeCamera_->LookAt(pos, at, up);
+	tahoeNodeCamera_->LookAt(
+		*((RadeonRays::float3*)&pos),
+		*((RadeonRays::float3*)&at),
+		*((RadeonRays::float3*)&up)
+		);
 }
 
 
@@ -726,7 +743,7 @@ void Renderer::OnPropertyChanged(FrNode* node, uint32_t const& propertyKey, void
 				case RPR_CAMERA_SENSOR_SIZE:
 				{
 					rpr_float2 sensorSize = node->GetProperty<rpr_float2>(RPR_CAMERA_SENSOR_SIZE);
-					tahoeNodeCamera_->SetSensorSize(sensorSize);
+					tahoeNodeCamera_->SetSensorSize(   *((RadeonRays::float2*)&sensorSize)   );
 					break;
 				}
 
@@ -839,16 +856,16 @@ void Renderer::OnPropertyChanged(FrNode* node, uint32_t const& propertyKey, void
 
 				case RPR_LIGHT_TRANSFORM:
 				{
-					RadeonRays::matrix transform = node->GetProperty<RadeonRays::matrix>(RPR_LIGHT_TRANSFORM);
+					RadeonProRender::matrix transform = node->GetProperty<RadeonProRender::matrix>(RPR_LIGHT_TRANSFORM);
 
-					tahoeNodeLight_->SetTransform(transform);
+					tahoeNodeLight_->SetTransform(   *((RadeonRays::matrix*)&transform)    );
 					break;
 				}
 
 				case RPR_DIRECTIONAL_LIGHT_RADIANT_POWER:
 				{
-					RadeonRays::float3 radiantPower = node->GetProperty<RadeonRays::float3>(RPR_DIRECTIONAL_LIGHT_RADIANT_POWER);
-					tahoeNodeLight_->SetRadiantPower(radiantPower);
+					RadeonProRender::float3 radiantPower = node->GetProperty<RadeonProRender::float3>(RPR_DIRECTIONAL_LIGHT_RADIANT_POWER);
+					tahoeNodeLight_->SetRadiantPower( *((RadeonRays::float3*)&radiantPower)   );
 					break;
 				}
 
@@ -917,16 +934,16 @@ void Renderer::OnPropertyChanged(FrNode* node, uint32_t const& propertyKey, void
 
 				case RPR_LIGHT_TRANSFORM:
 				{
-					RadeonRays::matrix transform = node->GetProperty<RadeonRays::matrix>(RPR_LIGHT_TRANSFORM);
+					RadeonProRender::matrix transform = node->GetProperty<RadeonProRender::matrix>(RPR_LIGHT_TRANSFORM);
 
-					tahoeNodeLight_->SetTransform(transform);
+					tahoeNodeLight_->SetTransform(   *((RadeonRays::matrix*)&transform)   );
 					break;
 				}
 
 				case RPR_POINT_LIGHT_RADIANT_POWER:
 				{
-					RadeonRays::float3 radiantPower = node->GetProperty<RadeonRays::float3>(RPR_POINT_LIGHT_RADIANT_POWER);
-					tahoeNodeLight_->SetRadiantPower(radiantPower);
+					RadeonProRender::float3 radiantPower = node->GetProperty<RadeonProRender::float3>(RPR_POINT_LIGHT_RADIANT_POWER);
+					tahoeNodeLight_->SetRadiantPower(  *((RadeonRays::float3*)&radiantPower)   );
 					break;
 				}
 
@@ -961,23 +978,23 @@ void Renderer::OnPropertyChanged(FrNode* node, uint32_t const& propertyKey, void
 
 				case RPR_LIGHT_TRANSFORM:
 				{
-					RadeonRays::matrix transform = node->GetProperty<RadeonRays::matrix>(RPR_LIGHT_TRANSFORM);
+					RadeonProRender::matrix transform = node->GetProperty<RadeonProRender::matrix>(RPR_LIGHT_TRANSFORM);
 
-					tahoeNodeLight_->SetTransform(transform);
+					tahoeNodeLight_->SetTransform(   *((RadeonRays::matrix*)&transform)    );
 					break;
 				}
 
 				case RPR_SPOT_LIGHT_RADIANT_POWER:
 				{
-					RadeonRays::float3 radiantPower = node->GetProperty<RadeonRays::float3>(RPR_SPOT_LIGHT_RADIANT_POWER);
-					tahoeNodeLight_->SetRadiantPower(radiantPower);
+					RadeonProRender::float3 radiantPower = node->GetProperty<RadeonProRender::float3>(RPR_SPOT_LIGHT_RADIANT_POWER);
+					tahoeNodeLight_->SetRadiantPower(   *((RadeonRays::float3*)&radiantPower)    );
 					break;
 				}
 
 				case RPR_SPOT_LIGHT_CONE_SHAPE:
 				{
-					RadeonRays::float2 val = node->GetProperty<RadeonRays::float2>(RPR_SPOT_LIGHT_CONE_SHAPE);
-					tahoeNodeLight_->SetSpotConeShape(val);
+					RadeonProRender::float2 val = node->GetProperty<RadeonProRender::float2>(RPR_SPOT_LIGHT_CONE_SHAPE);
+					tahoeNodeLight_->SetSpotConeShape(    *((RadeonRays::float2*)&val)     );
 					break;
 				}
 
@@ -1029,9 +1046,9 @@ void Renderer::OnPropertyChanged(FrNode* node, uint32_t const& propertyKey, void
 
 				case RPR_SHAPE_TRANSFORM:
 				{
-					RadeonRays::matrix m = node->GetProperty<RadeonRays::matrix>(RPR_SHAPE_TRANSFORM);
+					RadeonProRender::matrix m = node->GetProperty<RadeonProRender::matrix>(RPR_SHAPE_TRANSFORM);
 
-					tahoeNodeShape_->SetTransform(m);
+					tahoeNodeShape_->SetTransform(   *((RadeonRays::matrix*)&m)    );
 
 					break;
 				}
@@ -1095,17 +1112,17 @@ void Renderer::OnPropertyChanged(FrNode* node, uint32_t const& propertyKey, void
 						}
 						*/
 
-						const std::shared_ptr<MaterialNode> valueType = node->GetProperty<std::shared_ptr<MaterialNode>>(propertyKey);
+						const std::shared_ptr<RprMaterialNode> valueType = node->GetProperty<std::shared_ptr<RprMaterialNode>>(propertyKey);
 
-						if ( valueType->m_type == MaterialNode::MATNODETYPE::UINT1 )
+						if ( valueType->m_type == RprMaterialNode::MATNODETYPE::UINT1 )
 						{
 							tahoeNodeMaterial_->SetInputValue(name_it->second.c_str(), valueType->m_uint);
 						}
-						else if ( valueType->m_type == MaterialNode::MATNODETYPE::FLOAT4 )
+						else if ( valueType->m_type == RprMaterialNode::MATNODETYPE::FLOAT4 )
 						{
-							tahoeNodeMaterial_->SetInputValue(name_it->second.c_str(), valueType->m_float4);
+							tahoeNodeMaterial_->SetInputValue(name_it->second.c_str(),      *((RadeonRays::float4*)&valueType->m_float4)     );
 						}
-						else if ( valueType->m_type == MaterialNode::MATNODETYPE::FRNODE )
+						else if ( valueType->m_type == RprMaterialNode::MATNODETYPE::FRNODE )
 						{
 							MaterialObject* input_ = valueType->m_node->GetProperty<MaterialObject*>(FR_NODE_BAIKAL_NODE);
 							tahoeNodeMaterial_->SetInputValue(name_it->second.c_str(), input_);
@@ -1124,17 +1141,17 @@ void Renderer::OnPropertyChanged(FrNode* node, uint32_t const& propertyKey, void
 
 					else if ( name_it2 != kMaterialNodeInputStrings.end() )
 					{
-						const std::shared_ptr<MaterialNode> valueType = node->GetProperty<std::shared_ptr<MaterialNode>>(propertyKey);
+						const std::shared_ptr<RprMaterialNode> valueType = node->GetProperty<std::shared_ptr<RprMaterialNode>>(propertyKey);
 
-						if ( valueType->m_type == MaterialNode::MATNODETYPE::UINT1 )
+						if ( valueType->m_type == RprMaterialNode::MATNODETYPE::UINT1 )
 						{
 							tahoeNodeMaterial_->SetInputValue(name_it2->second.c_str(), valueType->m_uint);
 						}
-						else if ( valueType->m_type == MaterialNode::MATNODETYPE::FLOAT4 )
+						else if ( valueType->m_type == RprMaterialNode::MATNODETYPE::FLOAT4 )
 						{
-							tahoeNodeMaterial_->SetInputValue(name_it2->second.c_str(), valueType->m_float4);
+							tahoeNodeMaterial_->SetInputValue(name_it2->second.c_str(),   *((RadeonRays::float4*)&valueType->m_float4)    );
 						}
-						else if ( valueType->m_type == MaterialNode::MATNODETYPE::FRNODE )
+						else if ( valueType->m_type == RprMaterialNode::MATNODETYPE::FRNODE )
 						{
 							//valueType->m_node
 

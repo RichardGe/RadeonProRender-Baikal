@@ -1,27 +1,45 @@
 #pragma once
 
 
-#include <RprHybrid/Node/FrNode.h>
-#include <RprHybrid/Base/Common.h>
+#include "FrNode.h"
+#include "../Base/Common.h"
 
 
-class MaterialNode
+class RprMaterialNode
 {
 public:
 
-	MaterialNode()
+	RprMaterialNode()
 	{
 		m_type = UNDEF;
+		m_debug_temp_count++;
 	}
 
-	MaterialNode(rpr_uint ui)
+	RprMaterialNode(rpr_uint ui)
 	{
 		SetUint1(ui);
+		m_debug_temp_count++;
 	}
 
-	~MaterialNode()
+	RprMaterialNode(float x, float y, float z, float w)
 	{
-		
+		m_type = MATNODETYPE::FLOAT4;
+		m_float4.x = x;
+		m_float4.y = y;
+		m_float4.z = z;
+		m_float4.w = w;
+		m_debug_temp_count++;
+	}
+
+	RprMaterialNode(FrNode* nod)
+	{
+		SetFrNode(nod);
+		m_debug_temp_count++;
+	}
+
+	~RprMaterialNode()
+	{
+		m_debug_temp_count--;
 	}
 
 	enum MATNODETYPE 
@@ -70,6 +88,8 @@ public:
 		rpr_float4 m_float4;
 		rpr_uint m_uint;
 	};
+
+	static int64_t m_debug_temp_count;
 };
 
 

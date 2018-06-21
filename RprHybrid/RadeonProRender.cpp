@@ -24,9 +24,15 @@
 #include <map>
 #include <unordered_map>
 
+#ifdef RPR_FOR_BAIKAL
 #include <RprHybrid/RadeonProRender.h>
 #include <RprHybrid/RadeonProRender_GL.h>
 #include <RprHybrid/RadeonProRender_CL.h>
+#else
+#include <Rpr/RadeonProRender.h>
+#include <Rpr/RadeonProRender_GL.h>
+#include <Rpr/RadeonProRender_CL.h>
+#endif
 
 //#include "Image/stbi.h"
 //#include "Image/hdrloader.h"
@@ -52,12 +58,16 @@
 
 #ifdef RPR_FOR_BAIKAL
 #include <BaikalRendererDLL/TahoeDefaultParam.h>
-#include "BaikalRendererDLL/MaterialNode.h"
+//#include "BaikalRendererDLL/RprMaterialNode.h"
+#include "RprHybrid/Node/ListChangedArgs_Scene.h"
 #else
 #include <Tahoe/TahoeDefaultParam.h>
+#include "Rpr/Node/ListChangedArgs_Scene.h"
 #endif
 
-#include "RprHybrid/Node/ListChangedArgs_Scene.h"
+
+
+#include "Node/RprMaterialnode.h"
 
 
 #define SET_STATUS(status_ptr, value) if(status_ptr)*(status_ptr)=(value)
@@ -71,11 +81,11 @@
 #define TOSTRING__RPR_CPP____(x) STRINGIFY__RPR_CPP____(x)
 #define VERSION_STRING__RPR_CPP____ "This DLL is version " TOSTRING__RPR_CPP____(RPR_API_VERSION)
 
-#ifndef RPR_FOR_BAIKAL
+
+#define RENDERER_ID_TAHOE 1001
+#define RENDERER_ID_BAIKAL 1002
+
 using namespace RadeonProRender;
-#else
-using namespace RadeonRays;
-#endif
 
 static std::map<uint32_t, ParameterDesc> ContextParameterDescriptions = {
 	{ RPR_CONTEXT_AA_CELL_SIZE, { "aacellsize", "Numbers of cells for stratified sampling", RPR_PARAMETER_TYPE_UINT } },
@@ -135,11 +145,8 @@ static std::map<uint32_t, ParameterDesc> ContextParameterDescriptions = {
 	{ RPR_CONTEXT_OOC_CACHE_PATH, { "ooccachepath", "change the out-of-core directory path", RPR_PARAMETER_TYPE_STRING } },
 	{ RPR_CONTEXT_RENDER_LAYER_MASK, { "renderlayermask", "unsingned int 32 render layer mask for shape", RPR_PARAMETER_TYPE_UINT } },
 	{ RPR_CONTEXT_SINGLE_LEVEL_BVH_ENABLED, { "singlelevelbvh", "0 or 1 to disable/enable single BVH", RPR_PARAMETER_TYPE_UINT } },
+	{ RPR_CONTEXT_RANDOM_SEED, { "randseed", "", RPR_PARAMETER_TYPE_UINT } },
 
-
-	#ifdef RPR_FOR_BAIKAL
-	{ RPR_CONTEXT_RANDOM_SEED, { "randseed", "0 or 1 to disable/enable single BVH", RPR_PARAMETER_TYPE_UINT } },
-	#endif
 
 };
 
@@ -201,10 +208,8 @@ static std::map<std::string, uint32_t> ContextParameterNamesToKeys = {
 	{ "ooccachepath", RPR_CONTEXT_OOC_CACHE_PATH },
 	{ "renderlayermask", RPR_CONTEXT_RENDER_LAYER_MASK },
 	{ "singlelevelbvh", RPR_CONTEXT_SINGLE_LEVEL_BVH_ENABLED },
-
-	#ifdef RPR_FOR_BAIKAL
 	{ "randseed"  ,   RPR_CONTEXT_RANDOM_SEED  }
-	#endif
+
 
 };
 
@@ -1157,6 +1162,7 @@ rpr_int rprContextGetInfo(rpr_context context, rpr_context_info context_info, si
 
 		case RPR_CONTEXT_CPU_THREAD_LIMIT:
 		case RPR_CONTEXT_API_VERSION:
+		case RPR_CONTEXT_RANDOM_SEED:
 			requiredSize = sizeof(rpr_uint);
 			break;
 
@@ -1247,6 +1253,10 @@ rpr_int rprContextGetInfo(rpr_context context, rpr_context_info context_info, si
 
 				case RPR_CONTEXT_API_VERSION:
 					*static_cast<rpr_uint*>(data) = ctx->GetProperty<rpr_uint>(RPR_CONTEXT_API_VERSION);
+					break;
+
+				case RPR_CONTEXT_RANDOM_SEED:
+					*static_cast<rpr_uint*>(data) = ctx->GetProperty<rpr_uint>(RPR_CONTEXT_RANDOM_SEED);
 					break;
 
 				case RPR_CONTEXT_RENDER_STATUS :
@@ -2468,23 +2478,6 @@ rpr_int rprContextCreateMeshEx(
 	rpr_shape* out_mesh)
 {
 
-	#ifdef RPR_FOR_BAIKAL
-	if (num_perVertexFlags == 0 && numberOfTexCoordLayers == 1)
-    {
-        //can use rprContextCreateMesh
-        return rprContextCreateMesh(context,
-                                vertices, num_vertices, vertex_stride,
-                                normals, num_normals, normal_stride,
-                                texcoords[0], num_texcoords[0], texcoord_stride[0],
-                                vertex_indices, vidx_stride,
-                                normal_indices, nidx_stride,
-                                texcoord_indices_[0], tidx_stride_[0],
-                                num_face_vertices, num_faces, out_mesh);
-    }
-	return RPR_ERROR_UNIMPLEMENTED;
-	#endif
-
-
 	
 	//in case of issues during creation, it's safer to return a null pointer, rather than let the pointer undefined.
 	if ( out_mesh )
@@ -2504,6 +2497,25 @@ rpr_int rprContextCreateMeshEx(
 	try
 	{
 		CHECK_NOT_NULL(ctx);
+
+		if ( ctx->GetProperty<rpr_uint>(RPR_OBJECT_RENDERER_ID) == RENDERER_ID_BAIKAL )
+		{
+			if (num_perVertexFlags == 0 && numberOfTexCoordLayers == 1)
+			{
+				//can use rprContextCreateMesh
+				return rprContextCreateMesh(context,
+										vertices, num_vertices, vertex_stride,
+										normals, num_normals, normal_stride,
+										texcoords[0], num_texcoords[0], texcoord_stride[0],
+										vertex_indices, vidx_stride,
+										normal_indices, nidx_stride,
+										texcoord_indices_[0], tidx_stride_[0],
+										num_face_vertices, num_faces, out_mesh);
+			}
+			return RPR_ERROR_UNIMPLEMENTED;
+		}
+
+
 		if ( numberOfTexCoordLayers > NB_MAX_UV_CHANNELS )
 		{
 			throw FrException(__FILE__,__LINE__,RPR_ERROR_INVALID_PARAMETER, "",ctx);
@@ -3331,12 +3343,16 @@ rpr_int rprCameraSetTransform(rpr_camera camera, rpr_bool transpose, rpr_float* 
 			transform[12], transform[13], transform[14], transform[15]
 		);
 
-		#ifdef RPR_FOR_BAIKAL
-		if (!transpose)
-		#else
-		if (transpose)
-		#endif
-			m = m.transpose();
+		if ( node->GetProperty<rpr_uint>(RPR_OBJECT_RENDERER_ID) == RENDERER_ID_BAIKAL )
+		{
+			if (!transpose)
+				m = m.transpose();
+		}
+		else
+		{
+			if (transpose)
+				m = m.transpose();
+		}
 
 		node->SetProperty(RPR_CAMERA_TRANSFORM, m);
 
@@ -4168,9 +4184,7 @@ rpr_int rprShapeSetMaterialFaces(rpr_shape shape, rpr_material_node material, rp
 
 rpr_int rprShapeSetVolumeMaterial(rpr_shape shape, rpr_material_node material)
 {
-	#ifdef RPR_FOR_BAIKAL
-	return RPR_SUCCESS; // unsupported
-	#endif
+
 
     s_logger.printTrace("status = ");
     TRACE__FUNCTION_OPEN;
@@ -4186,6 +4200,13 @@ rpr_int rprShapeSetVolumeMaterial(rpr_shape shape, rpr_material_node material)
 		CHECK_NOT_NULL(node);
 		MACRO__CHECK_ARGUMENT_TYPE_ALLSHAPES(shape);
 		MACRO__CHECK_ARGUMENT_TYPE(material,Material);
+
+		
+		if ( node->GetProperty<rpr_uint>(RPR_OBJECT_RENDERER_ID) == RENDERER_ID_BAIKAL )
+		{
+			return RPR_ERROR_UNIMPLEMENTED; // not supported
+		}
+
 
 
         node->SetProperty(RPR_SHAPE_VOLUME_MATERIAL, static_cast<FrNode*>(material));
@@ -5779,12 +5800,16 @@ extern RPR_API_ENTRY rpr_int rprHeteroVolumeSetTransform(
 			     transform[12], transform[13], transform[14], transform[15]);
 
 
-		#ifdef RPR_FOR_BAIKAL
-		if (!transpose)
-		#else
-		if (transpose)
-		#endif
-			m = m.transpose();
+		if ( node->GetProperty<rpr_uint>(RPR_OBJECT_RENDERER_ID) == RENDERER_ID_BAIKAL )
+		{
+			if (!transpose)
+				m = m.transpose();
+		}
+		else
+		{
+			if (transpose)
+				m = m.transpose();
+		}
 
 		node->SetProperty(RPR_HETEROVOLUME_TRANSFORM, m);
 
@@ -7484,12 +7509,16 @@ rpr_int rprShapeSetTransform(rpr_shape shape, rpr_bool transpose, const rpr_floa
 			transform[12], transform[13], transform[14], transform[15]
 		);
 
-		#ifdef RPR_FOR_BAIKAL
-		if (!transpose)
-		#else
-		if (transpose)
-		#endif
-			m = m.transpose();
+		if ( node->GetProperty<rpr_uint>(RPR_OBJECT_RENDERER_ID) == RENDERER_ID_BAIKAL )
+		{
+			if (!transpose)
+				m = m.transpose();
+		}
+		else
+		{
+			if (transpose)
+				m = m.transpose();
+		}
 
 		node->SetProperty(RPR_SHAPE_TRANSFORM, m);
 
@@ -8017,12 +8046,16 @@ rpr_int rprLightSetTransform(rpr_light light, rpr_bool transpose, const rpr_floa
 			transform[12], transform[13], transform[14], transform[15]
 		);
 
-		#ifdef RPR_FOR_BAIKAL
-		if (!transpose)
-		#else
-		if (transpose)
-		#endif
-			m = m.transpose();
+		if ( node->GetProperty<rpr_uint>(RPR_OBJECT_RENDERER_ID) == RENDERER_ID_BAIKAL )
+		{
+			if (!transpose)
+				m = m.transpose();
+		}
+		else
+		{
+			if (transpose)
+				m = m.transpose();
+		}
 
 		node->SetProperty(RPR_LIGHT_TRANSFORM, m);
 
@@ -8346,13 +8379,13 @@ extern RPR_API_ENTRY rpr_int rprMaterialSystemGetSize(rpr_context in_context, rp
 	}
 }
 
-#ifdef RPR_FOR_BAIKAL
-#define RPR_TYPE_OF_MATERIAL_NODE std::shared_ptr<MaterialNode>
-#define RPR_TYPE_OF_MATERIAL_NODE_INIT std::shared_ptr<MaterialNode>(new MaterialNode())
-#else
-#define RPR_TYPE_OF_MATERIAL_NODE FrNode*
-#define RPR_TYPE_OF_MATERIAL_NODE_INIT nullptr
-#endif
+//#ifdef RPR_FOR_BAIKAL
+#define RPR_TYPE_OF_MATERIAL_NODE std::shared_ptr<RprMaterialNode>
+#define RPR_TYPE_OF_MATERIAL_NODE_INIT std::shared_ptr<RprMaterialNode>(new RprMaterialNode())
+//#else
+//#define RPR_TYPE_OF_MATERIAL_NODE FrNode*
+//#define RPR_TYPE_OF_MATERIAL_NODE_INIT nullptr
+//#endif
 
 
 rpr_int rprMaterialSystemCreateNode(rpr_material_system in_matsys, rpr_material_node_type in_type, rpr_material_node* out_node)
@@ -8520,11 +8553,11 @@ rpr_int rprMaterialSystemCreateNode(rpr_material_system in_matsys, rpr_material_
 				n->AddProperty<RPR_TYPE_OF_MATERIAL_NODE>(RPR_MATERIAL_INPUT_COLOR2, RPR_TYPE_OF_MATERIAL_NODE_INIT); nbMaterialInputCount[in_type]++;
 				n->AddProperty<RPR_TYPE_OF_MATERIAL_NODE>(RPR_MATERIAL_INPUT_COLOR3, RPR_TYPE_OF_MATERIAL_NODE_INIT); nbMaterialInputCount[in_type]++;
 
-				#ifdef RPR_FOR_BAIKAL
-				n->AddProperty<RPR_TYPE_OF_MATERIAL_NODE>(RPR_MATERIAL_INPUT_OP, std::shared_ptr<MaterialNode>(new MaterialNode(RPR_MATERIAL_NODE_OP_ADD))); nbMaterialInputCount[in_type]++;
-				#else
-				n->AddProperty<rpr_uint>(RPR_MATERIAL_INPUT_OP, RPR_MATERIAL_NODE_OP_ADD); nbMaterialInputCount[in_type]++;
-				#endif
+				//#ifdef RPR_FOR_BAIKAL
+				n->AddProperty<RPR_TYPE_OF_MATERIAL_NODE>(RPR_MATERIAL_INPUT_OP, std::shared_ptr<RprMaterialNode>(new RprMaterialNode((rpr_uint)RPR_MATERIAL_NODE_OP_ADD))); nbMaterialInputCount[in_type]++;
+				//#else
+				//n->AddProperty<rpr_uint>(RPR_MATERIAL_INPUT_OP, RPR_MATERIAL_NODE_OP_ADD); nbMaterialInputCount[in_type]++;
+				//#endif
 
 				break;
 
@@ -8550,7 +8583,7 @@ rpr_int rprMaterialSystemCreateNode(rpr_material_system in_matsys, rpr_material_
 
 			case RPR_MATERIAL_NODE_UV_PROCEDURAL:
 				nbMaterialInputCount[in_type] = 0;
-				n->AddProperty<rpr_uint>(RPR_MATERIAL_INPUT_UV_TYPE, RPR_MATERIAL_NODE_UVTYPE_PLANAR); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_MATERIAL_INPUT_UV_TYPE, std::shared_ptr<RprMaterialNode>(new RprMaterialNode((rpr_uint)RPR_MATERIAL_NODE_UVTYPE_PLANAR))); nbMaterialInputCount[in_type]++;
 				n->AddProperty<RPR_TYPE_OF_MATERIAL_NODE>(RPR_MATERIAL_INPUT_ORIGIN, RPR_TYPE_OF_MATERIAL_NODE_INIT); nbMaterialInputCount[in_type]++;
 				n->AddProperty<RPR_TYPE_OF_MATERIAL_NODE>(RPR_MATERIAL_INPUT_ZAXIS, RPR_TYPE_OF_MATERIAL_NODE_INIT); nbMaterialInputCount[in_type]++;
 				n->AddProperty<RPR_TYPE_OF_MATERIAL_NODE>(RPR_MATERIAL_INPUT_XAXIS, RPR_TYPE_OF_MATERIAL_NODE_INIT); nbMaterialInputCount[in_type]++;
@@ -8615,12 +8648,12 @@ rpr_int rprMaterialSystemCreateNode(rpr_material_system in_matsys, rpr_material_
 
 			case RPR_MATERIAL_NODE_CONSTANT_TEXTURE:
 				nbMaterialInputCount[in_type] = 0;
-				n->AddProperty <rpr_float4> (RPR_MATERIAL_INPUT_VALUE, rpr_float4(0,0,0,0)); nbMaterialInputCount[in_type]++;
+				n->AddProperty <std::shared_ptr<RprMaterialNode>> (RPR_MATERIAL_INPUT_VALUE, std::shared_ptr<RprMaterialNode>(new RprMaterialNode(0,0,0,0))); nbMaterialInputCount[in_type]++;
 				break;
 
 			case RPR_MATERIAL_NODE_INPUT_LOOKUP:
 				nbMaterialInputCount[in_type] = 0;
-				n->AddProperty<rpr_uint>(RPR_MATERIAL_INPUT_VALUE, RPR_MATERIAL_NODE_LOOKUP_N); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_MATERIAL_INPUT_VALUE, std::shared_ptr<RprMaterialNode>(new RprMaterialNode(          (rpr_uint)RPR_MATERIAL_NODE_LOOKUP_N     ))); nbMaterialInputCount[in_type]++;
 				break;
 
 			case RPR_MATERIAL_NODE_STANDARD:
@@ -8650,43 +8683,43 @@ rpr_int rprMaterialSystemCreateNode(rpr_material_system in_matsys, rpr_material_
 
 				
 
-			#ifdef RPR_FOR_BAIKAL
+			//#ifdef RPR_FOR_BAIKAL
 
 			case RPR_MATERIAL_NODE_UBERV2:
 				nbMaterialInputCount[in_type] = 0;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_LAYERS, std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_LAYERS, std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
 
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_DIFFUSE_COLOR , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_REFLECTION_COLOR  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_REFLECTION_ROUGHNESS  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_REFLECTION_ANISOTROPY  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_REFLECTION_ANISOTROPY_ROTATION  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_REFLECTION_IOR  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_REFLECTION_METALNESS  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_REFRACTION_COLOR  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_REFRACTION_ROUGHNESS  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_REFRACTION_IOR  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_REFRACTION_IOR_MODE  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_REFRACTION_THIN_SURFACE  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_COATING_COLOR  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_COATING_IOR  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_EMISSION_COLOR  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_EMISSION_WEIGHT  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_EMISSION_MODE  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_TRANSPARENCY  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_NORMAL  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_BUMP  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_DISPLACEMENT  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_SSS_ABSORPTION_COLOR  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_SSS_SCATTER_COLOR  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_SSS_ABSORPTION_DISTANCE  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_SSS_SCATTER_DISTANCE  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_SSS_SCATTER_DIRECTION  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_SSS_SUBSURFACE_COLOR  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
-				n->AddProperty<std::shared_ptr<MaterialNode>>(RPR_UBER_MATERIAL_SSS_MULTISCATTER  , std::shared_ptr<MaterialNode>(new MaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_DIFFUSE_COLOR , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_REFLECTION_COLOR  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_REFLECTION_ROUGHNESS  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_REFLECTION_ANISOTROPY  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_REFLECTION_ANISOTROPY_ROTATION  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_REFLECTION_IOR  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_REFLECTION_METALNESS  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_REFRACTION_COLOR  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_REFRACTION_ROUGHNESS  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_REFRACTION_IOR  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_REFRACTION_IOR_MODE  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_REFRACTION_THIN_SURFACE  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_COATING_COLOR  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_COATING_IOR  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_EMISSION_COLOR  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_EMISSION_WEIGHT  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_EMISSION_MODE  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_TRANSPARENCY  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_NORMAL  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_BUMP  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_DISPLACEMENT  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_SSS_ABSORPTION_COLOR  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_SSS_SCATTER_COLOR  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_SSS_ABSORPTION_DISTANCE  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_SSS_SCATTER_DISTANCE  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_SSS_SCATTER_DIRECTION  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_SSS_SUBSURFACE_COLOR  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
+				n->AddProperty<std::shared_ptr<RprMaterialNode>>(RPR_UBER_MATERIAL_SSS_MULTISCATTER  , std::shared_ptr<RprMaterialNode>(new RprMaterialNode()) ); nbMaterialInputCount[in_type]++;
 
 				break;
-			#endif
+			//#endif
 
 
 			default :
@@ -9022,6 +9055,7 @@ rpr_int rprMaterialNodeGetInfo(rpr_material_node node, rpr_material_node_info in
 					case RPR_MATERIAL_NODE_MICROFACET_ANISOTROPIC_REFLECTION:
 					case RPR_MATERIAL_NODE_MICROFACET_ANISOTROPIC_REFRACTION:
 					case RPR_MATERIAL_NODE_TWOSIDED:
+					case RPR_MATERIAL_NODE_UBERV2:
 						*reinterpret_cast<size_t*>(data) = nbMaterialInputCount[type];
 						break;
 					
@@ -9068,7 +9102,7 @@ rpr_int rprMaterialNodeGetInfo(rpr_material_node node, rpr_material_node_info in
 	return RPR_SUCCESS;
 }
 
-#ifndef RPR_FOR_BAIKAL
+//#ifndef RPR_FOR_BAIKAL
 rpr_int rprMaterialNodeSetInputNByKey(rpr_material_node in_node, rpr_material_node_input in_input, rpr_material_node in_input_node)
 {
 	//note: don't generate trace here, function not exposed - but used internally.
@@ -9084,6 +9118,9 @@ rpr_int rprMaterialNodeSetInputNByKey(rpr_material_node in_node, rpr_material_no
 		CHECK_NOT_NULL(matNode);
 		MACRO__CHECK_ARGUMENT_TYPE(in_node,Material);
 
+		FrNode* InNodeInput = static_cast<FrNode*>(in_input_node);
+		
+
 
 		if (!isStd || (isStd && in_input == RPR_MATERIAL_INPUT_WEIGHT))
 		{
@@ -9092,24 +9129,31 @@ rpr_int rprMaterialNodeSetInputNByKey(rpr_material_node in_node, rpr_material_no
 
 			FrAutoreleasePool& autoreleasePool = matNode->GetProperty<FrAutoreleasePool>(FR_MATERIAL_AUTORELEASE_POOL);
 
-			FrNode* oldProp = matNode->GetProperty<FrNode*>(in_input);
+			std::shared_ptr<RprMaterialNode> oldProp = matNode->GetProperty<std::shared_ptr<RprMaterialNode>>(in_input);
 
-            if (oldProp)
+			FrNode* oldPropNode = nullptr;
+			if (oldProp->m_type == RprMaterialNode::MATNODETYPE::FRNODE)
             {
-                oldProp->SetProperty<FrNode*>(FR_NODE_GRAPH_MATERIAL_PARENT, nullptr);
-            }
-
-			if (oldProp && autoreleasePool.find(oldProp) != autoreleasePool.cend())
-			{
-				sg->DeleteNode(oldProp);
-				autoreleasePool.erase(oldProp);
+				oldPropNode = oldProp->m_node;
 			}
 
-			matNode->SetProperty(in_input, static_cast<FrNode*>(in_input_node));
 
-            if (in_input_node)
+            if (oldPropNode)
             {
-                static_cast<FrNode*>(in_input_node)->SetProperty<FrNode*>(FR_NODE_GRAPH_MATERIAL_PARENT, static_cast<FrNode*>(in_node));
+                oldPropNode->SetProperty<FrNode*>(FR_NODE_GRAPH_MATERIAL_PARENT, nullptr);
+            }
+
+			if (oldPropNode && autoreleasePool.find(oldPropNode) != autoreleasePool.cend())
+			{
+				sg->DeleteNode(oldPropNode);
+				autoreleasePool.erase(oldPropNode);
+			}
+
+			matNode->SetProperty(in_input, static_cast<  std::shared_ptr<RprMaterialNode>  >(  std::shared_ptr<RprMaterialNode>(   new RprMaterialNode(InNodeInput)   )));
+
+            if (InNodeInput)
+            {
+				InNodeInput->SetProperty<FrNode*>(FR_NODE_GRAPH_MATERIAL_PARENT, static_cast<FrNode*>(in_node));
             }
 		}
 		else
@@ -9142,7 +9186,7 @@ rpr_int rprMaterialNodeSetInputNByKey(rpr_material_node in_node, rpr_material_no
 
 	return RPR_SUCCESS;
 }
-#endif
+//#endif
 
 rpr_int rprMaterialNodeSetInputN(rpr_material_node in_node, const rpr_char* in_input, rpr_material_node in_input_node)
 {
@@ -9166,18 +9210,21 @@ rpr_int rprMaterialNodeSetInputN(rpr_material_node in_node, const rpr_char* in_i
 		auto itr = MaterialNodeInputKeys.find(in_input);
 		if (itr != MaterialNodeInputKeys.end())
 		{
-			#ifndef RPR_FOR_BAIKAL
-			rpr_int retCode = rprMaterialNodeSetInputNByKey(in_node, itr->second, in_input_node);
-			if ( retCode != RPR_SUCCESS )
-				throw FrException(__FILE__,__LINE__,retCode, "",nodeInRPR);
-			else
-				return retCode;
-			#else
-			std::shared_ptr<MaterialNode> previousState = nodeInRPR->GetProperty<std::shared_ptr<MaterialNode>>(itr->second);
-			previousState->SetFrNode(nodeInRPRinput);
-			nodeInRPR->PropertyChanged(itr->second);
-			return RPR_SUCCESS;
-			#endif
+			//if ( nodeInRPR->GetProperty<rpr_uint>(RPR_OBJECT_RENDERER_ID) != RENDERER_ID_BAIKAL )
+			//{
+			//	rpr_int retCode = rprMaterialNodeSetInputNByKey(in_node, itr->second, in_input_node);
+			//	if ( retCode != RPR_SUCCESS )
+			//		throw FrException(__FILE__,__LINE__,retCode, "",nodeInRPR);
+			//	else
+			//		return retCode;
+			//}
+			//else
+			{
+				std::shared_ptr<RprMaterialNode> previousState = nodeInRPR->GetProperty<std::shared_ptr<RprMaterialNode>>(itr->second);
+				previousState->SetFrNode(nodeInRPRinput);
+				nodeInRPR->PropertyChanged(itr->second);
+				return RPR_SUCCESS;
+			}
 		}
 		else
 		{
@@ -9190,7 +9237,7 @@ rpr_int rprMaterialNodeSetInputN(rpr_material_node in_node, const rpr_char* in_i
 	}
 }
 
-#ifndef RPR_FOR_BAIKAL
+//#ifndef RPR_FOR_BAIKAL
 rpr_int rprMaterialNodeSetInputFByKey(rpr_material_node in_node, rpr_material_node_input in_input, rpr_float in_value_x, rpr_float in_value_y, rpr_float in_value_z, rpr_float in_value_w)
 {
 	//note: don't generate trace here, function not exposed - but used internally.
@@ -9207,7 +9254,12 @@ rpr_int rprMaterialNodeSetInputFByKey(rpr_material_node in_node, rpr_material_no
 			rpr_material_node_type type = matNode->GetProperty<rpr_material_node_type>(RPR_MATERIAL_NODE_TYPE);
 			if (type == RPR_MATERIAL_NODE_CONSTANT_TEXTURE)
 			{
-				matNode->SetProperty <rpr_float4>(in_input, rpr_float4(in_value_x, in_value_y, in_value_z, in_value_w));
+				//matNode->SetProperty <rpr_float4>(in_input, rpr_float4(in_value_x, in_value_y, in_value_z, in_value_w));
+
+				std::shared_ptr<RprMaterialNode> previousState = matNode->GetProperty<std::shared_ptr<RprMaterialNode>>(in_input);
+				previousState->SetFloat4(in_value_x, in_value_y, in_value_z, in_value_w);
+				matNode->PropertyChanged(in_input);
+
 				return RPR_SUCCESS;
 			}
 
@@ -9218,7 +9270,8 @@ rpr_int rprMaterialNodeSetInputFByKey(rpr_material_node in_node, rpr_material_no
 			std::shared_ptr<FrRendererEncalps> renderer = ctx->GetProperty< std::shared_ptr<FrRendererEncalps> >(RPR_CONTEXT_ACTIVE_PLUGIN);
 
 			FrNode* tex = sg->CreateNode(NodeTypes::Material, [=](FrNode* n) {
-				n->AddProperty <rpr_float4>(RPR_MATERIAL_INPUT_VALUE, rpr_float4(in_value_x, in_value_y, in_value_z, in_value_w));
+				//n->AddProperty <rpr_float4>(RPR_MATERIAL_INPUT_VALUE, rpr_float4(in_value_x, in_value_y, in_value_z, in_value_w));
+				n->AddProperty <  std::shared_ptr<RprMaterialNode>  >(RPR_MATERIAL_INPUT_VALUE,   std::shared_ptr<RprMaterialNode>(new RprMaterialNode(in_value_x, in_value_y, in_value_z, in_value_w)));
 
 				n->SetProperty(FR_NODE_CONTEXT, ctx);
 				n->SetProperty(RPR_MATERIAL_NODE_TYPE, static_cast<rpr_material_node_type>(RPR_MATERIAL_NODE_CONSTANT_TEXTURE));
@@ -9251,7 +9304,7 @@ rpr_int rprMaterialNodeSetInputFByKey(rpr_material_node in_node, rpr_material_no
 
 	return RPR_SUCCESS;
 }
-#endif
+//#endif
 
 rpr_int rprMaterialNodeSetInputF(rpr_material_node in_node, const rpr_char* in_input, rpr_float in_value_x, rpr_float in_value_y, rpr_float in_value_z, rpr_float in_value_w)
 {
@@ -9278,18 +9331,21 @@ rpr_int rprMaterialNodeSetInputF(rpr_material_node in_node, const rpr_char* in_i
 		auto itr = MaterialNodeInputKeys.find(in_input);
 		if (itr != MaterialNodeInputKeys.end())
 		{
-			#ifndef RPR_FOR_BAIKAL
-			rpr_int retCode = rprMaterialNodeSetInputFByKey(in_node, itr->second, in_value_x, in_value_y, in_value_z, in_value_w);
-			if ( retCode != RPR_SUCCESS )
-				throw FrException(__FILE__,__LINE__,retCode, "",nodeInRPR);
+			if ( nodeInRPR->GetProperty<rpr_uint>(RPR_OBJECT_RENDERER_ID) != RENDERER_ID_BAIKAL )
+			{
+				rpr_int retCode = rprMaterialNodeSetInputFByKey(in_node, itr->second, in_value_x, in_value_y, in_value_z, in_value_w);
+				if ( retCode != RPR_SUCCESS )
+					throw FrException(__FILE__,__LINE__,retCode, "",nodeInRPR);
+				else
+					return retCode;
+			}
 			else
-				return retCode;
-			#else
-			std::shared_ptr<MaterialNode> previousState = nodeInRPR->GetProperty<std::shared_ptr<MaterialNode>>(itr->second);
-			previousState->SetFloat4(in_value_x, in_value_y, in_value_z, in_value_w);
-			nodeInRPR->PropertyChanged(itr->second);
-			return RPR_SUCCESS;
-			#endif
+			{
+				std::shared_ptr<RprMaterialNode> previousState = nodeInRPR->GetProperty<std::shared_ptr<RprMaterialNode>>(itr->second);
+				previousState->SetFloat4(in_value_x, in_value_y, in_value_z, in_value_w);
+				nodeInRPR->PropertyChanged(itr->second);
+				return RPR_SUCCESS;
+			}
 		}
 		else
 		{
@@ -9315,13 +9371,16 @@ rpr_int rprMaterialNodeSetInputUByKey(rpr_material_node in_node, rpr_material_no
 		CHECK_NOT_NULL(matNode);
 		MACRO__CHECK_ARGUMENT_TYPE(in_node,Material);
 
-		#ifndef RPR_FOR_BAIKAL
-		matNode->SetProperty(in_input, in_value);
-		#else
-		std::shared_ptr<MaterialNode> previousState = matNode->GetProperty<std::shared_ptr<MaterialNode>>(in_input);
-		previousState->SetUint1(in_value);
-		matNode->PropertyChanged(in_input);
-		#endif
+		//if ( matNode->GetProperty<rpr_uint>(RPR_OBJECT_RENDERER_ID) != RENDERER_ID_BAIKAL )
+		//{
+		//	matNode->SetProperty(in_input, in_value);
+		//}
+		//else
+		{
+			std::shared_ptr<RprMaterialNode> previousState = matNode->GetProperty<std::shared_ptr<RprMaterialNode>>(in_input);
+			previousState->SetUint1(in_value);
+			matNode->PropertyChanged(in_input);
+		}
 
 	}
 	catch (FrException& e)
@@ -9391,13 +9450,16 @@ rpr_int rprMaterialNodeSetInputImageDataByKey(rpr_material_node in_node, rpr_mat
 		MACRO__CHECK_ARGUMENT_TYPE(in_node,Material);
 		MACRO__CHECK_ARGUMENT_TYPE(in_image,Image);
 
-		#ifndef RPR_FOR_BAIKAL
-		matNode->SetProperty(in_input, static_cast<FrNode*>(in_image));
-		#else
-		std::shared_ptr<MaterialNode> previousState = matNode->GetProperty<std::shared_ptr<MaterialNode>>(in_input);
-		previousState->SetFrNode(static_cast<FrNode*>(in_image));
-		matNode->PropertyChanged(in_input);
-		#endif
+		//if ( matNode->GetProperty<rpr_uint>(RPR_OBJECT_RENDERER_ID) != RENDERER_ID_BAIKAL )
+		//{
+		//	matNode->SetProperty(in_input, static_cast<FrNode*>(in_image));
+		//}
+		//else
+		{
+			std::shared_ptr<RprMaterialNode> previousState = matNode->GetProperty<std::shared_ptr<RprMaterialNode>>(in_input);
+			previousState->SetFrNode(static_cast<FrNode*>(in_image));
+			matNode->PropertyChanged(in_input);
+		}
 	}
 	catch (FrException& e)
 	{
@@ -9428,7 +9490,12 @@ rpr_int rprMaterialNodeSetInputBufferDataByKey(rpr_material_node in_node, rpr_ma
 		MACRO__CHECK_ARGUMENT_TYPE(in_node,Material);
 		MACRO__CHECK_ARGUMENT_TYPE(in_buffer,Buffer);
 
-		matNode->SetProperty(in_input, static_cast<FrNode*>(in_buffer));
+		//matNode->SetProperty(in_input, static_cast<FrNode*>(in_buffer));
+
+		std::shared_ptr<RprMaterialNode> previousState = matNode->GetProperty<std::shared_ptr<RprMaterialNode>>(in_input);
+		previousState->SetFrNode(static_cast<FrNode*>(in_buffer));
+		matNode->PropertyChanged(in_input);
+
 	}
 	catch (FrException& e)
 	{
@@ -9695,7 +9762,7 @@ rpr_int rprMaterialNodeGetInputInfo(rpr_material_node node, rpr_int input_idx, r
 				|| matNodeType == RPR_MATERIAL_NODE_ARITHMETIC && key == RPR_MATERIAL_INPUT_OP
 				|| matNodeType == RPR_MATERIAL_NODE_INPUT_LOOKUP && key == RPR_MATERIAL_INPUT_VALUE)
 			{
-				auto value = n->GetProperty<uint>(key); // just for debug, we check that no exception are raised when trying to get an uint from key
+				//auto value = n->GetProperty<uint>(key); // just for debug, we check that no exception are raised when trying to get an uint from key
 				requiredSize = sizeof(rpr_uint);
 			}
 
@@ -9707,13 +9774,20 @@ rpr_int rprMaterialNodeGetInputInfo(rpr_material_node node, rpr_int input_idx, r
 				//|| matNodeType == RPR_MATERIAL_NODE_AO_MAP  // no input data for AO map
 				) && key == RPR_MATERIAL_INPUT_DATA)
 			{
-				auto value = n->GetProperty<FrNode*>(key); // just for debug, we check that no exception are raised when trying to get an FrNode from key
+				//auto value = n->GetProperty<FrNode*>(key); // just for debug, we check that no exception are raised when trying to get an FrNode from key
 				requiredSize = sizeof(rpr_image);
 			}
 			//all other cases:
 			else
 			{
-				auto value = n->GetProperty<FrNode*>(key);
+				auto value_ = n->GetProperty<std::shared_ptr<RprMaterialNode>>(key);
+
+				FrNode* value = nullptr;
+				if ( value_->m_type == RprMaterialNode::MATNODETYPE::FRNODE )
+				{
+					value = value_->m_node;
+				}
+
 
 				if (!value)
 				{
@@ -9775,7 +9849,7 @@ rpr_int rprMaterialNodeGetInputInfo(rpr_material_node node, rpr_int input_idx, r
 						|| matNodeType == RPR_MATERIAL_NODE_ARITHMETIC && key == RPR_MATERIAL_INPUT_OP
 						|| matNodeType == RPR_MATERIAL_NODE_INPUT_LOOKUP && key == RPR_MATERIAL_INPUT_VALUE)
 					{
-						auto value = n->GetProperty<uint>(key); // just for debug, we check that no exception are raised when trying to get an uint from key
+						//auto value = n->GetProperty<uint>(key); // just for debug, we check that no exception are raised when trying to get an uint from key
 						*type = RPR_MATERIAL_NODE_INPUT_TYPE_UINT;
 					}
 
@@ -9787,23 +9861,30 @@ rpr_int rprMaterialNodeGetInputInfo(rpr_material_node node, rpr_int input_idx, r
 					//all other cases:
 					else
 					{
-						auto value = n->GetProperty<FrNode*>(key);
+						//auto value = n->GetProperty<FrNode*>(key);
+						std::shared_ptr<RprMaterialNode> value = n->GetProperty<std::shared_ptr<RprMaterialNode>>(key);
 
-						if (!value)
+						FrNode* nodeFrNode = nullptr;
+						if ( value->m_type ==  RprMaterialNode::MATNODETYPE::FRNODE )
+						{
+							nodeFrNode = value->m_node;
+						}
+
+						if (!nodeFrNode)
 						{
 							*type = RPR_MATERIAL_NODE_INPUT_TYPE_NODE;
 						}
-						else if ( value->GetType() == NodeTypes::Image )
+						else if ( nodeFrNode->GetType() == NodeTypes::Image )
 						{
 							*type = RPR_MATERIAL_NODE_INPUT_TYPE_IMAGE;
 						}
-						else if ( value->GetType() == NodeTypes::Buffer )
+						else if ( nodeFrNode->GetType() == NodeTypes::Buffer )
 						{
 							*type = RPR_MATERIAL_NODE_INPUT_TYPE_BUFFER;
 						}
-						else if ( value->GetType() == NodeTypes::Material )
+						else if ( nodeFrNode->GetType() == NodeTypes::Material )
 						{
-							auto matNodeTypeValue = value->GetProperty<rpr_material_node_type>(RPR_MATERIAL_NODE_TYPE);
+							auto matNodeTypeValue = nodeFrNode->GetProperty<rpr_material_node_type>(RPR_MATERIAL_NODE_TYPE);
 
 							if (matNodeTypeValue == RPR_MATERIAL_NODE_CONSTANT_TEXTURE)
 							{
@@ -9847,19 +9928,44 @@ rpr_int rprMaterialNodeGetInputInfo(rpr_material_node node, rpr_int input_idx, r
 						//|| matNodeType == RPR_MATERIAL_NODE_AO_MAP  // no input data for AO map
 						) && key == RPR_MATERIAL_INPUT_DATA)
 					{
-						auto value = n->GetProperty<FrNode*>(key);
+						//auto value = n->GetProperty<FrNode*>(key);
+
+						auto value_ = n->GetProperty<std::shared_ptr<RprMaterialNode>>(key);
+
+						FrNode* value = nullptr;
+						if ( value_->m_type == RprMaterialNode::MATNODETYPE::FRNODE )
+						{
+							value = value_->m_node;
+						}
+
 						*(reinterpret_cast<rpr_image*>(data)) = value;
 					}
 					//special case #3: type is a BUFFER
 					else if ((matNodeType == RPR_MATERIAL_NODE_BUFFER_SAMPLER) && key == RPR_MATERIAL_INPUT_DATA)
 					{
-						auto value = n->GetProperty<FrNode*>(key);
+						//auto value = n->GetProperty<FrNode*>(key);
+
+						auto value_ = n->GetProperty<std::shared_ptr<RprMaterialNode>>(key);
+
+						FrNode* value = nullptr;
+						if ( value_->m_type == RprMaterialNode::MATNODETYPE::FRNODE )
+						{
+							value = value_->m_node;
+						}
+
+
 						*(reinterpret_cast<rpr_buffer*>(data)) = value;
 					}
 					//all other cases:
 					else
 					{
-						auto value = n->GetProperty<FrNode*>(key);
+						auto value_ = n->GetProperty<std::shared_ptr<RprMaterialNode>>(key);
+
+						FrNode* value = nullptr;
+						if ( value_->m_type == RprMaterialNode::MATNODETYPE::FRNODE )
+						{
+							value = value_->m_node;
+						}
 
 						if (!value)
 						{
@@ -9936,6 +10042,12 @@ rpr_int rprObjectDelete(void* obj)
 		{
 			//do not remove the callback, in case context is deleted first.
 			//sceneGraph->ClearCallbacks();
+
+			if ( RprMaterialNode::m_debug_temp_count != 0 )
+			{
+				throw FrException(__FILE__,__LINE__,RPR_ERROR_INVALID_PARAMETER, "Invalid material type",node);
+			}
+
 		}
 		else
 		{
@@ -10957,7 +11069,7 @@ rpr_int rprCompositeGetInfo(rpr_composite composite, rpr_composite_info composit
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-#ifdef RPR_FOR_BAIKAL
+//#ifdef RPR_FOR_BAIKAL
 
 static const std::map<rpr_material_node_input, std::string> kRPRInputStrings =
 {
@@ -11001,7 +11113,7 @@ rpr_int rprMaterialNodeSetInputN_ext(rpr_material_node in_node, rpr_material_nod
 	try
 	{
 		
-		std::shared_ptr<MaterialNode> previousState = matNode->GetProperty<std::shared_ptr<MaterialNode>>(in_input);
+		std::shared_ptr<RprMaterialNode> previousState = matNode->GetProperty<std::shared_ptr<RprMaterialNode>>(in_input);
 		previousState->SetFrNode(matNodeInput);
 		matNode->PropertyChanged(in_input);
 
@@ -11024,7 +11136,7 @@ rpr_int rprMaterialNodeSetInputF_ext(rpr_material_node in_node, rpr_material_nod
 	try
 	{
 		
-		std::shared_ptr<MaterialNode> previousState = matNode->GetProperty<std::shared_ptr<MaterialNode>>(in_input);
+		std::shared_ptr<RprMaterialNode> previousState = matNode->GetProperty<std::shared_ptr<RprMaterialNode>>(in_input);
 		previousState->SetFloat4(in_value_x, in_value_y, in_value_z, in_value_w);
 		matNode->PropertyChanged(in_input);
 
@@ -11046,7 +11158,7 @@ rpr_int rprMaterialNodeSetInputU_ext(rpr_material_node in_node, rpr_material_nod
 	try
 	{
 		
-		std::shared_ptr<MaterialNode> previousState = matNode->GetProperty<std::shared_ptr<MaterialNode>>(in_input);
+		std::shared_ptr<RprMaterialNode> previousState = matNode->GetProperty<std::shared_ptr<RprMaterialNode>>(in_input);
 		previousState->SetUint1(in_value);
 		matNode->PropertyChanged(in_input);
 
@@ -11075,7 +11187,7 @@ rpr_int rprMaterialNodeSetInputBufferData_ext(rpr_material_node in_node, rpr_mat
         : RPR_ERROR_UNSUPPORTED;
 }
 
-#endif
+//#endif
 
 
 

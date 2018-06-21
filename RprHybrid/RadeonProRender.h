@@ -40,7 +40,7 @@ extern "C" {
 #endif
 
 
-#define RPR_API_VERSION 0x010030100 
+#define RPR_API_VERSION 0x010030200 
 
 /*rpr_status*/
 #define RPR_SUCCESS 0 
@@ -113,6 +113,7 @@ extern "C" {
 
 /* rpr_object_info */
 #define RPR_OBJECT_NAME 0x777777 
+#define RPR_OBJECT_RENDERER_ID 0x777778 
 
 /* rpr_context_properties */
 #define RPR_CONTEXT_CREATEPROP_CPU_THREAD_LIMIT 0x600 
@@ -129,7 +130,6 @@ extern "C" {
 #define RPR_CONTEXT_ACTIVE_PLUGIN 0x108 
 #define RPR_CONTEXT_SCENE 0x109 
 #define RPR_CONTEXT_AA_CELL_SIZE 0x10A 
-#define RPR_CONTEXT_AA_SAMPLES 0x10B 
 #define RPR_CONTEXT_ITERATIONS 0x10B 
 #define RPR_CONTEXT_IMAGE_FILTER_TYPE 0x10C 
 #define RPR_CONTEXT_IMAGE_FILTER_BOX_RADIUS 0x10D 
@@ -185,8 +185,7 @@ extern "C" {
 #define RPR_CONTEXT_TRANSPARENT_BACKGROUND 0x13F 
 #define RPR_CONTEXT_MAX_DEPTH_SHADOW 0x140 
 #define RPR_CONTEXT_API_VERSION 0x141 
-
-#define RPR_CONTEXT_RANDOM_SEED 0x142
+#define RPR_CONTEXT_RANDOM_SEED 0x142 
 
 /* last of the RPR_CONTEXT_* */
 #define RPR_CONTEXT_MAX 0x143 
@@ -433,6 +432,7 @@ extern "C" {
 #define RPR_MATERIAL_NODE_BUFFER_SAMPLER 0x24 
 #define RPR_MATERIAL_NODE_UV_TRIPLANAR 0x25 
 #define RPR_MATERIAL_NODE_AO_MAP 0x26 
+#define RPR_MATERIAL_NODE_UBERV2 0x100
 /*rpr_material_node_input*/
 #define RPR_MATERIAL_INPUT_COLOR 0x0 
 #define RPR_MATERIAL_INPUT_COLOR0 0x1 
@@ -2559,7 +2559,7 @@ extern RPR_API_ENTRY rpr_int rprHeteroVolumeSetEmission(rpr_hetero_volume hetero
 extern RPR_API_ENTRY rpr_int rprHeteroVolumeSetAlbedo(rpr_hetero_volume heteroVolume, rpr_float r, rpr_float g, rpr_float b);
 extern RPR_API_ENTRY rpr_int rprHeteroVolumeSetFilter(rpr_hetero_volume heteroVolume, rpr_hetero_volume_filter filter);
 /***************compatibility part***************/
-#define FR_API_VERSION 0x010030100 
+#define FR_API_VERSION 0x010030200 
 #define FR_SUCCESS 0 
 #define FR_ERROR_COMPUTE_API_NOT_SUPPORTED -1 
 #define FR_ERROR_OUT_OF_SYSTEM_MEMORY -2 
@@ -2635,7 +2635,6 @@ extern RPR_API_ENTRY rpr_int rprHeteroVolumeSetFilter(rpr_hetero_volume heteroVo
 #define FR_CONTEXT_ACTIVE_PLUGIN 0x108 
 #define FR_CONTEXT_SCENE 0x109 
 #define FR_CONTEXT_AA_CELL_SIZE 0x10A 
-#define FR_CONTEXT_AA_SAMPLES 0x10B 
 #define FR_CONTEXT_ITERATIONS 0x10B 
 #define FR_CONTEXT_IMAGE_FILTER_TYPE 0x10C 
 #define FR_CONTEXT_IMAGE_FILTER_BOX_RADIUS 0x10D 
@@ -2690,7 +2689,8 @@ extern RPR_API_ENTRY rpr_int rprHeteroVolumeSetFilter(rpr_hetero_volume heteroVo
 #define FR_CONTEXT_SINGLE_LEVEL_BVH_ENABLED 0x13E 
 #define FR_CONTEXT_TRANSPARENT_BACKGROUND 0x13F 
 #define FR_CONTEXT_MAX_DEPTH_SHADOW 0x140 
-#define FR_CONTEXT_MAX RPR_CONTEXT_MAX 
+#define FR_CONTEXT_API_VERSION 0x141 
+#define FR_CONTEXT_MAX 0x142 
 #define FR_CAMERA_TRANSFORM 0x201 
 #define FR_CAMERA_FSTOP 0x202 
 #define FR_CAMERA_APERTURE_BLADES 0x203 
@@ -3366,22 +3366,9 @@ extern RPR_API_ENTRY fr_int frHeteroVolumeSetEmission(fr_hetero_volume heteroVol
 extern RPR_API_ENTRY fr_int frHeteroVolumeSetAlbedo(fr_hetero_volume heteroVolume, fr_float r, fr_float g, fr_float b);
 extern RPR_API_ENTRY fr_int frHeteroVolumeSetFilter(fr_hetero_volume heteroVolume, fr_hetero_volume_filter filter);
 
-#ifdef __cplusplus
-}
-#endif
 
 
 
-
-
-
-
-
-
-
-
-
-#define RPR_MATERIAL_NODE_UBERV2 0x100
 
 
 #define RPR_UBER_MATERIAL_DIFFUSE_COLOR 0x200U
@@ -3445,5 +3432,13 @@ extern RPR_API_ENTRY rpr_int rprMaterialNodeSetInputBufferData_ext(rpr_material_
 
 
 
+
+
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  /*__RADEONPRORENDER_H  */

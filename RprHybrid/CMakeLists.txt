@@ -7,6 +7,8 @@ set(SOURCES
 	Base/FrException.cpp
 	Base/FrTrace.cpp
 	Base/Library.cpp
+	Node/RprMaterialNode.cpp
+	Node/RprMaterialNode.h
 	Node/FrNode.cpp
 	Cache/SimpleImageCache.cpp
 	Cache/FrImageCache.cpp

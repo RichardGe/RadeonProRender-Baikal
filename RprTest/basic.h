@@ -73,8 +73,6 @@ public:
         m_output_path.append("/");
 
 
-        rpr_creation_flags flags = GetCreationFlags();
-
 
 		#ifdef BAIKAL_RPR_IS_HYBRID_
 			std::string TahoeNameFile = "../bin/Debug/BaikalRendererDLL.dll";
@@ -91,7 +89,8 @@ public:
 			#else
 				nullptr, 0, 
 			#endif
-			flags, nullptr, nullptr, &m_context);
+			RPR_CREATION_FLAGS_ENABLE_GPU0,
+			nullptr, nullptr, &m_context);
 
 		ASSERT_EQ(status,RPR_SUCCESS);
 
